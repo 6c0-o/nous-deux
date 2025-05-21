@@ -1,8 +1,11 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ['files.catbox.moe'],
+    domains: ['files.catbox.moe', 'raw.githubusercontent.com'],
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
 };
 

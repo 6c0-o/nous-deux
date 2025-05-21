@@ -6,6 +6,7 @@ import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
+import { v4 as uuidv4 } from 'uuid';
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -40,8 +41,15 @@ app.prepare().then(async () => {
 
   io.adapter(createAdapter(pubClient, subClient));
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     console.log('🟢 Connected:', socket.id);
+
+    const updateOnlinePlayers = async () => {
+      const sockets = await io.fetchSockets();
+      io.emit('online:connected', sockets.length);
+    };
+
+    await updateOnlinePlayers();
 
     socket.on('create-room', async ({}) => {}); // Not implemented yet
 
@@ -133,16 +141,53 @@ app.prepare().then(async () => {
         }
 
         const session = JSON.parse(rawSession);
-
         const usedQuestions = session.usedQuestions || [];
 
-        const questions = await prisma.question.findMany({
+        let allQuestions = await prisma.question.findMany({
           where: {
             mode,
             id: { notIn: usedQuestions },
           },
-          take: 20,
         });
+
+        function getRandomItems(arr, n) {
+          return arr.sort(() => Math.random() - 0.5).slice(0, n);
+        }
+
+        let questions = getRandomItems(allQuestions, 20);
+
+        if (questions.length === 0) {
+          const fallbackContents = [
+            "Dis à quel point tu aimes 'nous deux'.",
+            'Peut-être tu devrais regarder si la base est bien setup.',
+            'Tu ne devrais pas voir cette question dans la DB.',
+            'T’es sûr que t’as bien tout configuré ?',
+            "Décris un moment qui représente 'nous deux'.",
+            "Si 'nous deux' était un film, ce serait quoi ?",
+            "Imagine un futur parfait pour 'nous deux'.",
+            "Quel est ton souvenir préféré de 'nous deux' ?",
+            "Qu’est-ce que tu ressens quand tu penses à 'nous deux' ?",
+            "Si tu devais convaincre quelqu’un que 'nous deux' est spécial, tu dirais quoi ?",
+            "Qu’est-ce que tu dirais à 'nous deux' si c’était une personne ?",
+            "Quel emoji représente le mieux 'nous deux' ?",
+            "Quelle chanson te fait penser à 'nous deux' ?",
+            "Raconte une anecdote drôle sur 'nous deux'.",
+            "Qu’est-ce que tu changerais à 'nous deux' ?",
+            "Comment vois-tu 'nous deux' dans 10 ans ?",
+            "Si 'nous deux' était un plat, ce serait quoi ?",
+            "Complète la phrase : 'J’aime nous deux parce que…'",
+            "Qu’est-ce que 'nous deux' t’a appris ?",
+            "Quelle photo représente le mieux 'nous deux' ?",
+          ];
+
+          questions = fallbackContents.map((content) => ({
+            id: uuidv4(),
+            content,
+            type: 'QUESTION',
+            mode,
+            points: 0,
+          }));
+        }
 
         const newUsedQuestions = [
           ...usedQuestions,
@@ -154,14 +199,13 @@ app.prepare().then(async () => {
         const gameId = crypto.randomUUID();
         const gameKey = `game:${gameId}`;
 
-
         const gameData = {
           id: gameId,
           mode,
           roomId,
           startedAt: Date.now(),
           currentRound: 1,
-          questions: questions,
+          questions,
         };
 
         await redisClientServer.set(gameKey, JSON.stringify(gameData));
@@ -309,15 +353,14 @@ app.prepare().then(async () => {
       }
     });
 
-
     socket.on('get:game-info', async () => {
-      const totalQuestions = await prisma.question.count({
-        where: {},
-      });
+      console.log('get:game-info');
+      const totalQuestions = await prisma.question.count();
       socket.emit('response:game-info', { totalQuestions });
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
+      await updateOnlinePlayers();
       console.log('❌ Disconnected:', socket.id);
     });
   });

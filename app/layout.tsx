@@ -16,11 +16,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Nous Deux",
   description: "A interative game for couples",
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
-  },
 };
 
 export default function RootLayout({

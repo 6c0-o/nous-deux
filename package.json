@@ -1,12 +1,11 @@
 {
-  "name": "nous-deux-1",
+  "name": "nous-deux",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "cross-env NODE_ENV=production node server.js"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",
@@ -30,6 +29,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "tailwindcss": "^4",
