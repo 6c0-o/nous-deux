@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model GameMode {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String
+  emoji       String?
+  emojiUrl    String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  Question Question[]
+}
+
+enum QuestionType {
+  QUESTION
+  CHALLENGE
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  content   String
+  type      QuestionType
+  mode      String
+  points    Int      @default(1)
+
+  gameMode  GameMode? @relation(fields: [mode], references: [slug])
+}
